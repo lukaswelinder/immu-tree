@@ -1,6 +1,5 @@
 import { Record } from 'immutable'
 
-console.log(Record);
 
 class Greeting extends Record({ message: 'hi' }) {
   constructor(props) {
@@ -8,7 +7,11 @@ class Greeting extends Record({ message: 'hi' }) {
   }
 
   readMessage() {
-    console.log(this.get('message'));
+    console.log(this.message,this);
+  }
+
+  setMessage(msg) {
+    return this.set('message', msg);
   }
 }
 
