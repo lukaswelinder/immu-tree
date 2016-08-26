@@ -1,6 +1,218 @@
-import Greeting from './test.js'
+import Node from './components/Node.js'
+import { Record, List, Map, OrderedMap } from 'immutable'
 
-let greet = new Greeting({message: 5});
-greet.readMessage();
 
-export const Hello = Greeting({ message: 'hello' });
+const ImmuTreeRecord = Record({ __index: Map(), __active: null, __root: null });
+
+
+export class ImmuTree extends ImmuTreeRecord {
+
+  constructor(data_set) {
+
+    if(!(this instanceof ImmuTree))
+      return new ImmuTree(data_set);
+
+    let rootId = null,
+        index = Map().asMutable(),
+        children = Map().asMutable();
+
+    data_set.map((data) => {
+
+      let node = new Node(data).asMutable();
+
+      if(!data.parentId && data.parentId !== 0)
+        rootId = node.id, data.parentId = null;
+      else
+        index.setIn([data.parentId,'children', data.id], node.id);
+
+
+      index.setIn([data.id], node);
+
+      return data;
+
+    });
+
+    //   .map((data) => {
+    //
+    //   if(data.parentId)
+    //     index.setIn([data.id,'parent'], index.get(data.parentId));
+    //
+    //   return data;
+    //
+    // });
+
+    // replace with depth mapping
+    index.forEach((node) => index.setIn([node.id], node.asImmutable()));
+
+    let __index = Map(index.asImmutable());
+    let __active = __index.get(rootId);
+
+    super({ __index, __active });
+
+    return this;
+
+  }
+
+  get id() {
+    return this.getIn(['__active', 'id']);
+  }
+
+  get parentId() {
+    return this.getIn(['__active', 'parentId']);
+  }
+
+  get data() {
+    return this.getIn(['__active', 'data']);
+  }
+
+  get parent() {
+    let parentId = this.getIn(['__active', 'parentId']);
+    if(!parentId && parentId !== 0)
+      return null;
+    return this.setIn(['__active'], this.getIn(['__index', parentId]));
+  }
+
+  get ancestors() {
+    let ret = OrderedMap().asMutable(),
+      parent = this.parent;
+
+    while(parent) {
+      ret.set(parent.id, parent);
+      parent = parent.parent;
+    }
+
+    return ret.asImmutable();
+  }
+
+  get children() {
+    return Map().withMutations((mutableMap) => {
+      this.getIn(['__active','children']).forEach((childId) =>
+        mutableMap.set(childId, this.setIn(['__active'], this.getIn(['__index', childId]))));
+    });
+  }
+  
+  get descendants() {
+
+    let ret = OrderedMap().asMutable(),
+        gen = Map().asMutable(),
+        children = this.children;
+
+    while(children.size) {
+      children.forEach((child, key) => {
+        ret.set(key, child);
+        let children = child.children;
+        if(children)
+          gen.mergeDeep(children);
+      });
+      children = gen;
+      gen = Map().asMutable();
+    }
+    return ret.asImmutable();
+  }
+
+  set(key, val) {
+    switch(key) {
+      case 'data':
+        return this.setData(val);
+      case 'parent':
+        return this.setParent(val);
+      case 'children':
+        return this.setChildren(val);
+      default:
+        return super.set(key, val);
+    }
+  }
+
+  setIn(keyPath, val) {
+    switch(keyPath[0]) {
+      case '__index':
+        return super.setIn(keyPath, val);
+      case '__active':
+        return super.setIn(keyPath, val);
+      case 'data':
+        keyPath.unshift('__active');
+        return super.setIn(keyPath, val);
+      case 'parent':
+        keyPath.unshift('__active');
+        return super.setIn(keyPath, val);
+      case 'children':
+        keyPath.unshift('__active');
+        return super.setIn(keyPath, val);
+      default:
+        return;
+    }
+  }
+
+/* * > Creates and (attempts to) inserts new node to tree.
+ *
+ * setNode(data<Object>);
+ *
+ *   - This will attempt to convert 'data' to immutable using 'fromJS'.
+ *   - Argument 'data' must have a valid 'id' property.
+ *   - If 'parentId' property is 'null', will insert as root.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
+  setNode(data) {
+    // experimental WIP
+  }
+
+/* * > Sets data of active node.
+ *
+ * setData(data<Object>);
+ *
+ *   - This will attempt to convert 'data' to immutable using 'fromJS'.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
+  setData(data) {
+    // experimental WIP
+  }
+
+/* * > Creates and inserts parent node (of active node) from argument 'data'.
+ *
+ * setParent(data<Object || Immutable>);
+ *
+ *   - This will attempt to convert 'data' to immutable using 'fromJS'.
+ *   - Argument 'data' must have a valid 'id' property.
+ *   - The 'parentId' property of 'data' may be ignored and interpolated.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
+  setParent(data) {
+    // experimental WIP
+  }
+
+/* * > Creates & inserts child node (of active node) from argument 'data'.
+ *
+ * setChild(data<Object || Immutable>);
+ *
+ *   - This will attempt to convert 'data' to immutable using 'fromJS'.
+ *   - Argument's 'parentId' property will be interpolated.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
+  setChild(data) {
+    // experimental WIP
+  }
+
+/* * > Sets 'children' of active node, overwriting current 'children'.
+ *
+ * setChildren(data<Array || Iterable>);
+ *
+ *   - This will attempt to convert 'data' to immutable using 'fromJS'.
+ *   - Data set object's 'parentId' property will be interpolated.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
+  setChildren(data_set) {
+    // experimental WIP
+  }
+  
+
+}

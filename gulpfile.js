@@ -1,10 +1,11 @@
 const gulp = require('gulp'),
-      watch = require('gulp-watch'),
+      tape = require('gulp-tape'),
+      tap_colorize = require('tap-colorize'),
+      nodemon = require('gulp-nodemon'),
       sequence = require('gulp-sequence');
 
 const rollup = require('rollup'),
       buble = require('rollup-plugin-buble'),
-      eslint = require('rollup-plugin-eslint'),
       commonjs = require('rollup-plugin-commonjs'),
       node_resolve = require('rollup-plugin-node-resolve');
 
@@ -12,17 +13,21 @@ let cache = null;
 
 gulp.task('bundle', rollupBundle);
 
-gulp.task('bundle:dev', function() {
+gulp.task('test', () =>
+  gulp.src('spec/*.js').pipe(tape({ reporter: tap_colorize() })));
 
-  rollupBundle();
-  return watch('src/**/*.js', { read: false }, rollupBundle);
+gulp.task('build', sequence('bundle', 'test'));
 
-});
+gulp.task('dev', ['build'], () =>
+  nodemon({
+    script: 'sandbox.js',
+    watch: ['sandbox.js', 'spec/*.js', 'src/**/*.js'],
+    tasks: ['build']
+  }));
+
+function dev() { return sequence('bundle', 'test'); }
 
 function rollupBundle() {
-
-  let startTime = new Date();
-  console.log(`[${ startTime.toTimeString().split(' ')[0] }] Starting bundling task...`);
 
   return rollup.rollup({
 
@@ -52,7 +57,7 @@ function rollupBundle() {
 
     cache = bundle;
 
-    console.log(`Writing bundles to 'dist/'`);
+    console.log('Bundling complete; writing to dist/');
 
     let es = bundle.write({
       dest: 'dist/bundle.es2015.js',
@@ -74,10 +79,8 @@ function rollupBundle() {
     return Promise.all([es, umd]);
 
   }).then((bundles) => {
-
-    let endTime = new Date();
-    console.log(`[${ endTime.toTimeString().split(' ')[0] }] Completed bundling...`);
-    console.log(`Bundling task completed in ${endTime.getTime() - startTime.getTime()} ms`);
+    
+    console.log('Writing complete!');
 
     return bundles;
 
