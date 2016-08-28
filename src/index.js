@@ -1,11 +1,11 @@
 import Node from './components/Node.js'
-import { Record, List, Map, OrderedMap } from 'immutable'
+import { Record, Map, OrderedMap } from 'immutable'
 
 
 const ImmuTreeRecord = Record({ __index: Map(), __active: null, __root: null });
 
 
-export class ImmuTree extends ImmuTreeRecord {
+export default class ImmuTree extends ImmuTreeRecord {
 
   constructor(data_set) {
 
@@ -13,38 +13,54 @@ export class ImmuTree extends ImmuTreeRecord {
       return new ImmuTree(data_set);
 
     let rootId = null,
-        index = Map().asMutable(),
-        children = Map().asMutable();
+        index = Map().asMutable();
 
     data_set.map((data) => {
 
       let node = new Node(data).asMutable();
 
       if(!data.parentId && data.parentId !== 0)
-        rootId = node.id, data.parentId = null;
+        rootId = node.id, node.data.parentId = null;
       else
-        index.setIn([data.parentId,'children', data.id], node.id);
-
-
-      index.setIn([data.id], node);
+        index.setIn([node.parentId,'children', node.id], node.id);
+      
+      index.setIn([node.id], node);
 
       return data;
 
     });
 
-    //   .map((data) => {
-    //
-    //   if(data.parentId)
-    //     index.setIn([data.id,'parent'], index.get(data.parentId));
-    //
-    //   return data;
-    //
-    // });
+    let depth = 0,
+        depthMap = OrderedMap().asMutable(),
+        gen = index.getIn([rootId, 'children']);
+
+    depthMap.setIn([depth++, rootId], rootId);
+    depthMap.mergeDeepIn([depth++], index.getIn([rootId, 'children']));
+
+    while(gen && gen.size) {
+
+      gen.forEach((key) => {
+        let children = index.getIn([key, 'children']);
+        if(children.size)
+          depthMap.mergeDeepIn([depth], children);
+      });
+
+      gen = depthMap.get(depth++);
+
+    }
+
+    depthMap.reverse().forEach((group, depth) => {
+      group.forEach((key) => {
+        let node = index.getIn([key]);
+        index.setIn([key, 'depth'], depth);
+        index.setIn([node.parentId, 'height'], node.height + 1);
+      })
+    });
 
     // replace with depth mapping
     index.forEach((node) => index.setIn([node.id], node.asImmutable()));
 
-    let __index = Map(index.asImmutable());
+    let __index = index.asImmutable();
     let __active = __index.get(rootId);
 
     super({ __index, __active });
@@ -61,6 +77,14 @@ export class ImmuTree extends ImmuTreeRecord {
     return this.getIn(['__active', 'parentId']);
   }
 
+  get depth() {
+    return this.getIn(['__active', 'depth']);
+  }
+
+  get height() {
+    return this.getIn(['__active', 'height']);
+  }
+
   get data() {
     return this.getIn(['__active', 'data']);
   }
@@ -73,8 +97,11 @@ export class ImmuTree extends ImmuTreeRecord {
   }
 
   get ancestors() {
+
     let ret = OrderedMap().asMutable(),
-      parent = this.parent;
+        parent = this.parent;
+
+    ret.set(this.id, this);
 
     while(parent) {
       ret.set(parent.id, parent);
@@ -82,13 +109,18 @@ export class ImmuTree extends ImmuTreeRecord {
     }
 
     return ret.asImmutable();
+
   }
 
   get children() {
+
     return Map().withMutations((mutableMap) => {
+
       this.getIn(['__active','children']).forEach((childId) =>
         mutableMap.set(childId, this.setIn(['__active'], this.getIn(['__index', childId]))));
+
     });
+
   }
   
   get descendants() {
@@ -97,50 +129,123 @@ export class ImmuTree extends ImmuTreeRecord {
         gen = Map().asMutable(),
         children = this.children;
 
+    ret.set(this.id, this);
+
     while(children.size) {
+
       children.forEach((child, key) => {
         ret.set(key, child);
         let children = child.children;
-        if(children)
+        if(children.size)
           gen.mergeDeep(children);
       });
+
       children = gen;
       gen = Map().asMutable();
+
     }
+
     return ret.asImmutable();
+
+  }
+
+  get leaves() {
+
+    let ret = Map().asMutable(),
+        gen = Map().asMutable(),
+        children = this.children;
+
+    while(children.size) {
+
+      children.forEach((child, key) => {
+        let children = child.children;
+        if(children.size)
+          gen.mergeDeep(children);
+        else
+          ret.set(key, child);
+      });
+
+      children = gen;
+      gen = Map().asMutable();
+
+    }
+
+    return ret.asImmutable();
+
   }
 
   set(key, val) {
+
     switch(key) {
+
       case 'data':
         return this.setData(val);
+
       case 'parent':
         return this.setParent(val);
+
       case 'children':
         return this.setChildren(val);
+
       default:
         return super.set(key, val);
+
     }
+
   }
 
   setIn(keyPath, val) {
+
     switch(keyPath[0]) {
+
       case '__index':
         return super.setIn(keyPath, val);
+
       case '__active':
         return super.setIn(keyPath, val);
+
       case 'data':
         keyPath.unshift('__active');
         return super.setIn(keyPath, val);
-      case 'parent':
+
+      case 'parent': // :TODO: needs own method
         keyPath.unshift('__active');
         return super.setIn(keyPath, val);
-      case 'children':
+
+      case 'children': // :TODO: needs own method
         keyPath.unshift('__active');
         return super.setIn(keyPath, val);
+
       default:
         return;
+
     }
+
+  }
+
+  each(fn) {
+
+    fn(this, this.id, this);
+
+    let gen = Map().asMutable(),
+        children = this.children;
+
+    while(children.size) {
+
+      children.forEach((child, key) => {
+        fn(child, key, this);
+        let children = child.children;
+        if(children.size)
+          gen.mergeDeep(children);
+      });
+
+      children = gen;
+      gen = Map().asMutable();
+
+    }
+
+    return this;
+
   }
 
 /* * > Creates and (attempts to) inserts new node to tree.

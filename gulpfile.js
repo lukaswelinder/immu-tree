@@ -62,7 +62,7 @@ function rollupBundle() {
     let es = bundle.write({
       dest: 'dist/bundle.es2015.js',
       format: 'es',
-      exports: 'named',
+      // exports: 'named',
       moduleName: 'immuTree',
       sourceMap: true
     });
@@ -70,7 +70,7 @@ function rollupBundle() {
     let umd = bundle.write({
       dest: 'dist/bundle.umd.js',
       format: 'umd',
-      exports: 'named',
+      // exports: 'named',
       globals: { immutable: 'immutable' },
       moduleName: 'immuTree',
       sourceMap: true
