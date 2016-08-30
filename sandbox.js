@@ -9,18 +9,16 @@ let print = (d) => JSON.stringify(d, null, 2);
 let data_set = generate({ treeHeight: 10, childCount: 2 });
 
 
-
-
 let start = new Date().getTime();
 
 let immuTree = ImmuTree(data_set);
 
-// let leaves = immuTree.leaves.toArray();
+let leaves = immuTree.leaves.toArray();
 
 
-// let leaf = leaves.shift();
-// let ancestors = leaf.ancestors.toArray().map(d => `${d.id}: ${d.depth}`);
+let leaf = leaves.shift();
+let ancestors = leaf.ancestors.toArray().map(d => `${d.id}: ${d.depth}`);
 
 let end = new Date().getTime();
 
-console.log('immutree leaves depth', print(null), 'in ' + (end - start) + ' ms', data_set.length);
+console.log('immutree leaves depth', print(ancestors), 'in ' + (end - start) + ' ms', data_set.length);

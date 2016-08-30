@@ -15,7 +15,7 @@ export default class ImmuTree extends ImmuTreeRecord {
     let rootId = null,
         index = Map().asMutable();
 
-    data_set.map((data) => {
+    data_set.forEach((data) => {
 
       let node = new Node(data).asMutable();
 
@@ -26,9 +26,8 @@ export default class ImmuTree extends ImmuTreeRecord {
       
       index.setIn([node.id], node);
 
-      return data;
-
     });
+
 
     let depth = 0,
         depthMap = OrderedMap().asMutable(),
@@ -49,16 +48,15 @@ export default class ImmuTree extends ImmuTreeRecord {
 
     }
 
+
     depthMap.reverse().forEach((group, depth) => {
       group.forEach((key) => {
         let node = index.getIn([key]);
         index.setIn([key, 'depth'], depth);
         index.setIn([node.parentId, 'height'], node.height + 1);
+        index.setIn([node.id], node.asImmutable())
       })
     });
-
-    // replace with depth mapping
-    index.forEach((node) => index.setIn([node.id], node.asImmutable()));
 
     let __index = index.asImmutable();
     let __active = __index.get(rootId);
