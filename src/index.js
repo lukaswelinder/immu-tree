@@ -9,8 +9,12 @@ export default class ImmuTree extends ImmuTreeRecord {
 
   constructor(data_set) {
 
+    // prevent need for 'new' keyword
     if(!(this instanceof ImmuTree))
       return new ImmuTree(data_set);
+
+    // :TODO: allow for invocation with no data
+    // :TODO: move constructor functionality below to 'stratify' method within utils
 
     let rootId = null,
         index = Map().asMutable();
@@ -29,6 +33,7 @@ export default class ImmuTree extends ImmuTreeRecord {
     });
 
 
+    // :TODO: implement 'stritify' without immutable.js for better performance
     let depth = 0,
         depthMap = OrderedMap().asMutable(),
         gen = index.getIn([rootId, 'children']);
@@ -172,6 +177,16 @@ export default class ImmuTree extends ImmuTreeRecord {
 
   }
 
+/* * > Overwrite immutable.js 'set' method to invoke ImmuTree methods.
+ *
+ * set(key<primitive>, value<primitive || Object || Immutable>);
+ *
+ *   - Fairly straightforward method curry; uncertain of future changes here.
+ *   - Conversion to Immutable dependant upon property being set.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
   set(key, val) {
 
     switch(key) {
@@ -192,6 +207,16 @@ export default class ImmuTree extends ImmuTreeRecord {
 
   }
 
+/* * > Overwrite immutable.js 'setIn' method to invoke ImmuTree methods.
+ *
+ * setIn(key<Iterable>, value<Primitive || Object || Immutable>);
+ *
+ *   - Fairly straightforward method curry; uncertain of future changes here.
+ *   - Conversion to Immutable dependant upon property being set.
+ *
+ * returns - <ImmuTree>
+ *
+ * */
   setIn(keyPath, val) {
 
     switch(keyPath[0]) {
@@ -221,6 +246,7 @@ export default class ImmuTree extends ImmuTreeRecord {
 
   }
 
+  // :TODO: implement & document other 'each' methods from d3-hierarchy
   each(fn) {
 
     fn(this, this.id, this);
